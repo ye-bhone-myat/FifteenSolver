@@ -8,6 +8,7 @@ public class Solution implements Comparable<Solution>{
 
     public Solution(){
         steps = new ArrayList<>();
+        score = 1;
     }
 
     public Solution(GameState state){
@@ -53,10 +54,11 @@ public class Solution implements Comparable<Solution>{
 
     @Override
     public int compareTo(Solution other) {
-        if (this.steps.size() != other.steps.size()){
-            return this.steps.size() - other.steps.size();
-        } else {
             return other.score - this.score;
-        }
+    }
+
+    @Override
+    public String toString(){
+        return "[Moves: " + steps.size()+ ", Score: " + score + "]";
     }
 }
