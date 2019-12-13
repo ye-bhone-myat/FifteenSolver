@@ -1,7 +1,6 @@
-package edu.oswego.csc375;
+package edu.oswego.csc375.Puzzle;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentMap;
@@ -10,13 +9,13 @@ import java.util.concurrent.RecursiveTask;
 import java.util.stream.Collectors;
 
 
-public class SolverTask extends RecursiveTask<Solution> {
+class SolverTask extends RecursiveTask<Solution> {
 
     private final GameState state;
     private int depth;
     private static boolean cancelled;
     private final ConcurrentMap<String, GameState> searchedConfigs;
-    private int sideCount, square;
+    private int sideCount;
 
 
     public SolverTask(GameState state, int depth, ConcurrentMap<String, GameState> searchedConfigs, int sideCount) {
@@ -25,14 +24,10 @@ public class SolverTask extends RecursiveTask<Solution> {
         this.searchedConfigs = searchedConfigs;
         cancelled = false;
         this.sideCount = sideCount;
-        this.square = sideCount * sideCount;
     }
 
     @Override
     protected Solution compute() {
-        // try to add current to searched
-        // if current is searched or cancelled, null
-
         // if depth is 0 or if this is end, this
         // remove this from searched
 
@@ -42,126 +37,62 @@ public class SolverTask extends RecursiveTask<Solution> {
         // if there is some, sort and pick best
         // if there are none, null
 
+        // if current is searched or op is cancelled, return null
         if (searchedConfigs.putIfAbsent(state.toString(), state) != null || cancelled){
             return null;
         }
-        if (depth == 0 || state.evaluate() == 0){
+        // if current is a leaf node, remove from searched, return current state
+        if (depth == 0){
             searchedConfigs.remove(state.toString(), state);
             return new Solution(state);
         }
-        // perform next moves
+        // if current state is goal state, cancel, return current state
+        if (state.evaluate() == 0){
+            cancelled = true;
+            return new Solution(state);
+        }
+        // calculate next states
         ArrayList<GameState> states = new ArrayList<>();
-//        if (getValidMoves().size() == 2){
-//            for (Move m : getValidMoves()){
-//                GameState s = makeMove(m);
-//                searchedConfigs.remove(s.toString(), s);
-//            }
-//        }
         for (Move m : getValidMoves()){
             GameState s = makeMove(m);
-            // only put unexplored states in list of next possible states
+//             only put unexplored states in list of next possible states
             if (!searchedConfigs.containsKey(s.toString())) {
-                states.add(s);
+                    states.add(s);
             }
         }
         -- depth;
-        // if no available next states, null
-        if (states.size() == 0){
-            return null;
-        }
         // check for cancellation again
         if (cancelled) {
             return null;
         }
-        // fork next states
+        // fork
         ArrayList<SolverTask> solvers = new ArrayList<>();
         for (GameState s : states) {
-            // only create new solvers for unexplored configs
-            solvers.add(new SolverTask(s, depth, searchedConfigs, sideCount));
+                    solvers.add(new SolverTask(s, depth, searchedConfigs, sideCount));
         }
         ArrayList<Solution> deeperSolutions = RecursiveTask.invokeAll(solvers).stream()
                 .map(ForkJoinTask::join)
                 .filter(Objects::nonNull)
                 .sorted(Comparator.naturalOrder())
                 .collect(Collectors.toCollection(ArrayList::new));
-        // if next states return null, null
+        // if next states are null, return this state
         if (deeperSolutions.isEmpty()) {
+//            return new Solution(state);
             return null;
         }
         // add next moves to current move, return
         Solution deeperSolution = deeperSolutions.remove(0);
         Solution solution = new Solution(state);
-        solution.addStates(deeperSolution.getSteps());
+        solution.addStates(deeperSolution.getStates());
         return solution;
 
-
-
-
-
-
-//
-//        // if config is searched, or if task is cancelled
-//        if (searchedConfigs.putIfAbsent(state.toString(), state) != null || cancelled) {
-//            return null;
-//        }
-//        // if current config is end state
-//        if (state.evaluate() == 0) {
-//            cancelled = true;
-//            searchedConfigs.put(state.toString(), state);
-//            return new Solution(state);
-//        }
-//        ArrayList<Move> possibleMoves = getValidMoves();
-//        ArrayList<GameState> states = new ArrayList<>();
-//        for (Move m : possibleMoves) {
-//            GameState s = makeMove(m);
-//            // only put unexplored states in list of next possible states
-//            if (!searchedConfigs.containsKey(s.toString())) {
-//                states.add(s);
-//            }
-//        }
-//        if (states.size() == 0){
-//            return null;
-//        }
-//        --depth;
-//        states.sort(Comparator.naturalOrder());
-//        if (depth == 0) {
-//            // maximum depth reached; return a new Solution with this state and the best of the next states
-//            GameState s = states.get(0);
-//            searchedConfigs.put(s.toString(), s);
-//            return new Solution(new ArrayList<>(Arrays.asList(state, states.get(0))));
-//        }
-//        if (cancelled) {
-//            return null;
-//        }
-//        ArrayList<SolverTask> solvers = new ArrayList<>();
-//        for (GameState s : states) {
-//            // only create new solvers for unexplored configs
-//            solvers.add(new SolverTask(s, depth, searchedConfigs));
-//        }
-//
-//
-//        ArrayList<Solution> deeperSolutions = RecursiveTask.invokeAll(solvers).stream()
-//                .map(ForkJoinTask::join)
-//                .filter(Objects::nonNull)
-//                .sorted(Comparator.naturalOrder())
-//                .collect(Collectors.toCollection(ArrayList::new));
-//        if (deeperSolutions.isEmpty()) {
-//            return null;
-//        }
-//        Solution deeperSolution = deeperSolutions.remove(0);
-//        for (Solution s : deeperSolutions) {
-//            searchedConfigs.remove(s.toString(), s);
-//        }
-//        Solution solution = new Solution(state);
-//        solution.addStates(deeperSolution.getSteps());
-//        return solution;
 
     }
 
 
     private GameState makeMove(Move m) {
         GameState moved = new GameState(sideCount);
-        moved.setMoves(state.getMoves() + 1);
+        moved.setMoves(state.getMoveCount() + 1);
 
         switch (m) {
             case UP:

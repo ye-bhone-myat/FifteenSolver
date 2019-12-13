@@ -1,19 +1,25 @@
-package edu.oswego.csc375;
+package edu.oswego.csc375.Puzzle;
 
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 public class Solution implements Comparable<Solution>{
     private ArrayList<GameState> steps;
     private int score;
+    private double timeTaken;
 
-    public Solution(){
-        steps = new ArrayList<>();
-        score = 1;
-    }
 
     public Solution(GameState state){
         steps = new ArrayList<>();
         addState(state);
+    }
+
+    void setTimeTaken(double timeTaken){
+        this.timeTaken = timeTaken;
+    }
+
+    public double getTimeTaken() {
+        return timeTaken;
     }
 
     public Solution(ArrayList<GameState> steps){
@@ -21,12 +27,12 @@ public class Solution implements Comparable<Solution>{
         this.score = steps.get(steps.size() - 1).evaluate();
     }
 
-    public void addState(GameState state){
+    void addState(GameState state){
         steps.add(state);
         score = state.evaluate();
     }
 
-    public GameState getFirstState(){
+    GameState getFirstState(){
         return steps.get(0);
     }
 
@@ -34,23 +40,28 @@ public class Solution implements Comparable<Solution>{
         return steps.get(steps.size() - 1);
     }
 
-    public void addStates(ArrayList<GameState> states){
+    void addStates(ArrayList<GameState> states){
         steps.addAll(states);
         score = steps.get(steps.size() - 1).evaluate();
     }
 
-    public ArrayList<GameState> getSteps() {
+    public ArrayList<GameState> getStates(){
         return steps;
     }
 
-    public int getScore() {
+    public ArrayList<String> getSteps() {
+        return steps.stream().map(GameState::toString).collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    public int getMoves(){
+        return steps.size() - 1;
+    }
+
+    int getScore() {
         return score;
     }
 
-    public void setSteps(ArrayList<GameState> steps) {
-        this.steps = steps;
-        this.score = steps.get(steps.size() - 1).evaluate();
-    }
+
 
     @Override
     public int compareTo(Solution other) {
